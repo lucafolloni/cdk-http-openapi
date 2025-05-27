@@ -77,10 +77,10 @@ export class HttpOpenApi extends Construct {
             integration.sourcePath
           ),
           handler: integration.handler,
-          logRetention: integration.logRetentionDays ?? 90,
+          logRetention: integration.logRetention ?? 90,
           timeout: integration.timeout ?? Duration.seconds(3),
           memorySize: integration.memorySize ?? 128,
-          environment: integration.env
+          environment: integration.environment
         })
 
         this.functions[integration.operationId] = func

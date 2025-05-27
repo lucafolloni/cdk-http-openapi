@@ -65,10 +65,10 @@ export interface HttpApiIntegrationProps {
   readonly handler: string
   readonly runtime: Runtime
   readonly sourcePath: string
-  readonly logRetentionDays?: number
+  readonly logRetention?: number
   readonly timeout?: Duration
   readonly memorySize?: number
-  readonly env?: Record<string, string>
+  readonly environment?: Record<string, string>
 }
 
 export interface MethodMapping {
