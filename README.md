@@ -128,3 +128,6 @@ const api = new HttpOpenApi(this, 'MyApi', {
    
 });
 ```
+
+# Credits
+Based on the work by iDanielBot (https://github.com/iDanielBot/cdk-http-openapi.git);

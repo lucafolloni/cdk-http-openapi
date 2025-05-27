@@ -1,4 +1,5 @@
 import { aws_apigatewayv2 as apigwv2 } from 'aws-cdk-lib'
+import { Runtime } from 'aws-cdk-lib/aws-lambda'
 
 export interface HttpApiProps {
   /**
@@ -39,11 +40,11 @@ export interface HttpApiProps {
 
   /**
    * Runtime for the generated lambdas
-   * 
+   *
    * @default
    * 'lambda.Runtime.NODEJS_LATEST'
    */
-  readonly lambdasRuntime?: string;
+  readonly lambdasRuntime?: Runtime
 
   /**
    * Directory path for locating lambas source code.
