@@ -2,18 +2,18 @@ import * as fs from 'fs'
 
 import { DomainName } from '@aws-cdk/aws-apigatewayv2-alpha'
 import {
-  aws_lambda as lambda,
-  Stack,
-  Duration,
-  aws_route53 as route53,
   aws_certificatemanager as acm,
-  aws_apigatewayv2 as apigwv2
+  aws_apigatewayv2 as apigwv2,
+  Duration,
+  aws_lambda as lambda,
+  aws_route53 as route53,
+  Stack
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import * as YAML from 'yaml'
 
-import { HttpApiProps, MethodMapping } from './types'
 import { CorsConfigAllOrigins } from './cors'
+import { HttpApiProps, MethodMapping } from './types'
 
 const AUTHORIZER_KEY = 'custom_authorizer'
 
@@ -40,7 +40,7 @@ export class HttpOpenApi extends Construct {
    */
   public readonly methodMappings: Record<string, MethodMapping>
 
-  constructor (scope: Construct, id: string, props: HttpApiProps) {
+  constructor(scope: Construct, id: string, props: HttpApiProps) {
     super(scope, id)
 
     this.functions = {}
@@ -72,7 +72,7 @@ export class HttpOpenApi extends Construct {
         // TODO: Think about using NodeJS Lambdas
         const func = new lambda.Function(this, funcName, {
           functionName: funcName,
-          runtime: lambda.Runtime.NODEJS_14_X,
+          runtime: props.lambdasRuntime ?? lambda.Runtime.NODEJS_LATEST,
           code: lambda.AssetCode.fromAsset(
             props.lambdasSourcePath ?? './.build/src'
           ),
@@ -149,7 +149,7 @@ export class HttpOpenApi extends Construct {
    * @param customDomainName - customDomainName to be created in Api Gateway
    * @param certificateArn Arn of the certificate needed for the creation of custom domain. It must be a regional certificate.
    */
-  public enableCustomDomain (
+  public enableCustomDomain(
     customDomainName: string,
     certificateArn: string,
     zoneName: string
@@ -200,7 +200,7 @@ export class HttpOpenApi extends Construct {
    * @returns methods
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private buildMethodMappings (spec: any) {
+  private buildMethodMappings(spec: any) {
     const methods = {} as Record<string, MethodMapping>
 
     Object.keys(spec.paths).forEach((pathKey) => {
@@ -216,7 +216,7 @@ export class HttpOpenApi extends Construct {
     return methods
   }
 
-  private toAuthorizerSpec (lambdaAuthorizerArn: string, region: string) {
+  private toAuthorizerSpec(lambdaAuthorizerArn: string, region: string) {
     const uri = `arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${lambdaAuthorizerArn}/invocations`
 
     return {

@@ -46,6 +46,7 @@ export class MyServiceStack extends Stack {
       functionNamePrefix: 'cool-api',
       openApiSpec: './openapi.yml',
       lambdasSourcePath: './dist/src', // optional. It defaults to './.build/src'
+      lambdasRuntime: lambda.Runtime.NODEJS_22_X, // optional. It defaults to lambda.Runtime.NODEJS_LATEST
       integrations: [
         {
           operationId: 'getEntity', // for each operation you define in your OpenAPI spec

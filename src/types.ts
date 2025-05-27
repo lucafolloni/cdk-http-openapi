@@ -38,6 +38,14 @@ export interface HttpApiProps {
   readonly customAuthorizerLambdaArn?: string
 
   /**
+   * Runtime for the generated lambdas
+   * 
+   * @default
+   * 'lambda.Runtime.NODEJS_LATEST'
+   */
+  readonly lambdasRuntime?: string;
+
+  /**
    * Directory path for locating lambas source code.
    *
    * @default
