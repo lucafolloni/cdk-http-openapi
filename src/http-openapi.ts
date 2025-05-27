@@ -72,13 +72,13 @@ export class HttpOpenApi extends Construct {
         // TODO: Think about using NodeJS Lambdas
         const func = new lambda.Function(this, funcName, {
           functionName: funcName,
-          runtime: props.lambdasRuntime ?? lambda.Runtime.NODEJS_LATEST,
+          runtime: integration.runtime,
           code: lambda.AssetCode.fromAsset(
-            props.lambdasSourcePath ?? './.build/src'
+            integration.sourcePath
           ),
           handler: integration.handler,
           logRetention: integration.logRetentionDays ?? 90,
-          timeout: Duration.seconds(integration.timeoutSeconds ?? 3),
+          timeout: integration.timeout ?? Duration.seconds(3),
           memorySize: integration.memorySize ?? 128,
           environment: integration.env
         })

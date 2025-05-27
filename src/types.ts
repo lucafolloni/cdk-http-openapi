@@ -1,4 +1,4 @@
-import { aws_apigatewayv2 as apigwv2 } from 'aws-cdk-lib'
+import { aws_apigatewayv2 as apigwv2, Duration } from 'aws-cdk-lib'
 import { Runtime } from 'aws-cdk-lib/aws-lambda'
 
 export interface HttpApiProps {
@@ -39,25 +39,6 @@ export interface HttpApiProps {
   readonly customAuthorizerLambdaArn?: string
 
   /**
-   * Runtime for the generated lambdas
-   *
-   * @default
-   * 'lambda.Runtime.NODEJS_LATEST'
-   */
-  readonly lambdasRuntime?: Runtime
-
-  /**
-   * Directory path for locating lambas source code.
-   *
-   * @default
-   * './.build/src'
-   *
-   * @example
-   * './dist'
-   */
-  readonly lambdasSourcePath?: string
-
-  /**
    * Cors configuration for the api gateway.
    * all origins/methods/headers are allowed by default, set a value for this attribute to override default value
    *
@@ -82,8 +63,10 @@ export interface HttpApiProps {
 export interface HttpApiIntegrationProps {
   readonly operationId: string
   readonly handler: string
+  readonly runtime: Runtime
+  readonly sourcePath: string
   readonly logRetentionDays?: number
-  readonly timeoutSeconds?: number
+  readonly timeout?: Duration
   readonly memorySize?: number
   readonly env?: Record<string, string>
 }
