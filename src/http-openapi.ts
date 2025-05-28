@@ -95,7 +95,7 @@ export class HttpOpenApi extends Resource implements IRestApi {
     this.root = new RootResource(this, this.restApiRootResourceId)
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const api = this
-    this.deploymentStage = new Stage(this, '$default', { deployment: new Deployment(this, '$default', { api }) })
+    this.deploymentStage = new Stage(this, '$default', { deployment: new Deployment(this, 'deployment', { api }) })
 
     this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
       apiId: this.cfnApi.ref,
