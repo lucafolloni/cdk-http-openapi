@@ -3,21 +3,70 @@ import * as fs from 'fs'
 import { DomainName } from '@aws-cdk/aws-apigatewayv2-alpha'
 import {
   aws_certificatemanager as acm,
-  aws_apigatewayv2 as apigwv2,
-  Duration,
+  aws_apigatewayv2 as apigwv2, ArnFormat, Duration,
   aws_lambda as lambda,
+  RemovalPolicy,
+  ResourceEnvironment,
   aws_route53 as route53,
-  Stack
+  Stack,
+  Token,
+  ValidationError
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import * as YAML from 'yaml'
 
+import { CorsOptions, Deployment, Integration, IResource, IRestApi, MethodOptions, ResourceBase, Stage } from 'aws-cdk-lib/aws-apigateway'
 import { CorsConfigAllOrigins } from './cors'
 import { HttpApiProps, MethodMapping } from './types'
 
 const AUTHORIZER_KEY = 'custom_authorizer'
 
-export class HttpOpenApi extends Construct {
+export class HttpOpenApi extends Construct implements IRestApi {
+  restApiId: string
+
+  restApiName: string
+
+  get restApiRootResourceId(): string {
+    return this.root.resourceId
+  }
+
+  latestDeployment?: Deployment | undefined
+
+  deploymentStage: Stage = new Stage(this, '$default', { deployment: new Deployment(this, '$default', { api: this }) })
+
+  root: IResource = new RootResource(this, this.restApiRootResourceId)
+
+  arnForExecuteApi(method: string = '*', path: string = '/*', stage: string = '*'): string {
+    if (!Token.isUnresolved(path) && !path.startsWith('/')) {
+      throw new ValidationError(`"path" must begin with a "/": '${path}'`, this)
+    }
+
+    if (method.toUpperCase() === 'ANY') {
+      method = '*'
+    }
+
+    return Stack.of(this).formatArn({
+      service: 'execute-api',
+      resource: this.restApiId,
+      arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
+      resourceName: `${stage}/${method}${path}`
+    })
+  }
+
+  stack: Stack
+
+  get env(): ResourceEnvironment {
+    return {
+      account: this.stack.account,
+      region: this.stack.region
+    }
+  }
+
+  applyRemovalPolicy(policy: RemovalPolicy): void {
+    this.cfnApi.applyRemovalPolicy(policy)
+    this.apiStage.applyRemovalPolicy(policy)
+  }
+
   /**
    *  Api Resource being created based on openAPI definition
    */
@@ -48,7 +97,7 @@ export class HttpOpenApi extends Construct {
 
     const file = fs.readFileSync(props.openApiSpec, 'utf8')
     const spec = YAML.parse(file)
-    const stack = Stack.of(this)
+    this.stack = Stack.of(this)
 
     this.methodMappings = this.buildMethodMappings(spec)
 
@@ -56,6 +105,9 @@ export class HttpOpenApi extends Construct {
       body: spec,
       tags: undefined
     })
+
+    this.restApiId = this.cfnApi.ref
+    this.restApiName = this.cfnApi.ref
 
     this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
       apiId: this.cfnApi.ref,
@@ -109,7 +161,7 @@ export class HttpOpenApi extends Construct {
       spec.components.securitySchemes = {}
       // https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions-authorizer.html
       spec.components.securitySchemes[AUTHORIZER_KEY] =
-        this.toAuthorizerSpec(props.customAuthorizerLambdaArn, stack.region)
+        this.toAuthorizerSpec(props.customAuthorizerLambdaArn, this.stack.region)
     }
 
     // add passed or default cors
@@ -127,7 +179,7 @@ export class HttpOpenApi extends Construct {
         action: 'lambda:InvokeFunction',
         principal: 'apigateway.amazonaws.com',
         functionName: props.customAuthorizerLambdaArn,
-        sourceArn: `arn:aws:execute-api:${stack.region}:${stack.account}:${this.cfnApi.ref}/*/*/*`
+        sourceArn: `arn:aws:execute-api:${this.stack.region}:${this.stack.account}:${this.cfnApi.ref}/*/*/*`
       })
       this.permissions[AUTHORIZER_KEY] = permission
     }
@@ -138,7 +190,7 @@ export class HttpOpenApi extends Construct {
         action: 'lambda:InvokeFunction',
         principal: 'apigateway.amazonaws.com',
         functionName: func.functionName,
-        sourceArn: `arn:${stack.partition}:execute-api:${stack.region}:${stack.account}:${this.cfnApi.ref}/*/*`
+        sourceArn: `arn:${this.stack.partition}:execute-api:${this.stack.region}:${this.stack.account}:${this.cfnApi.ref}/*/*`
       })
       this.permissions[funcKey] = permission
     })
@@ -231,5 +283,22 @@ export class HttpOpenApi extends Construct {
         authorizerResultTtlInSeconds: 300
       }
     }
+  }
+}
+
+export class RootResource extends ResourceBase {
+  parentResource?: IResource | undefined
+  api: IRestApi
+  resourceId: string
+  path: string
+  defaultIntegration?: Integration | undefined
+  defaultMethodOptions?: MethodOptions | undefined
+  defaultCorsPreflightOptions?: CorsOptions | undefined
+
+  constructor(api: IRestApi, resourceId: string) {
+    super(api, resourceId)
+    this.api = api
+    this.resourceId = resourceId
+    this.path = '/'
   }
 }
