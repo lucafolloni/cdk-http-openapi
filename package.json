@@ -1,10 +1,11 @@
 {
   "name": "cdk-openapi-to-http-api",
-  "version": "1.2.2",
+  "version": "1.2.4",
   "description": "CDK Construct that lets you build AWS Api Gateway Http Api, backed by Lambdas, based on a OpenAPI spec file.",
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
+    "publish": "npm publish --scope=user",
     "cdk": "cdk",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

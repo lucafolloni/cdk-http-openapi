@@ -32,7 +32,7 @@ export class HttpOpenApi extends Construct implements IRestApi {
 
   deploymentStage: Stage = new Stage(this, '$default', { deployment: new Deployment(this, '$default', { api: this }) })
 
-  root: IResource = new RootResource(this, this.restApiRootResourceId)
+  root: IResource
 
   arnForExecuteApi(method: string = '*', path: string = '/*', stage: string = '*'): string {
     if (!Token.isUnresolved(path) && !path.startsWith('/')) {
@@ -107,6 +107,7 @@ export class HttpOpenApi extends Construct implements IRestApi {
     this.restApiId = this.cfnApi.ref
     this.restApiName = this.cfnApi.ref
     this.restApiRootResourceId = `${this.restApiId}-root`
+    this.root = new RootResource(this, this.restApiRootResourceId)
 
     this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
       apiId: this.cfnApi.ref,
