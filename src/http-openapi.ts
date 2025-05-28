@@ -27,7 +27,7 @@ export class HttpOpenApi extends Resource implements IRestApi {
 
   latestDeployment?: Deployment | undefined
 
-  deploymentStage: Stage = new Stage(this, '$default', { deployment: new Deployment(this, '$default', { api: this }) })
+  deploymentStage: Stage
 
   root: IResource
 
