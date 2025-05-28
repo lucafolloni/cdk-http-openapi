@@ -26,9 +26,7 @@ export class HttpOpenApi extends Construct implements IRestApi {
 
   restApiName: string
 
-  get restApiRootResourceId(): string {
-    return this.root.resourceId
-  }
+  restApiRootResourceId: string
 
   latestDeployment?: Deployment | undefined
 
@@ -108,6 +106,7 @@ export class HttpOpenApi extends Construct implements IRestApi {
 
     this.restApiId = this.cfnApi.ref
     this.restApiName = this.cfnApi.ref
+    this.restApiRootResourceId = `${this.restApiId}-root`
 
     this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
       apiId: this.cfnApi.ref,
