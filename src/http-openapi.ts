@@ -108,6 +108,7 @@ export class HttpOpenApi extends Construct implements IRestApi {
     this.restApiName = this.cfnApi.ref
     this.restApiRootResourceId = `${this.restApiId}-root`
     this.root = new RootResource(this, this.restApiRootResourceId)
+    this.deploymentStage = new Stage(this, '$default', { deployment: new Deployment(this, '$default', { api: this }) })
 
     this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
       apiId: this.cfnApi.ref,
