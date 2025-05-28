@@ -4,10 +4,7 @@ import { DomainName } from '@aws-cdk/aws-apigatewayv2-alpha'
 import {
   aws_certificatemanager as acm,
   aws_apigatewayv2 as apigwv2, ArnFormat, Duration,
-  aws_lambda as lambda,
-  RemovalPolicy,
-  ResourceEnvironment,
-  aws_route53 as route53,
+  aws_lambda as lambda, Resource, aws_route53 as route53,
   Stack,
   Token,
   ValidationError
@@ -21,7 +18,7 @@ import { HttpApiProps, MethodMapping } from './types'
 
 const AUTHORIZER_KEY = 'custom_authorizer'
 
-export class HttpOpenApi extends Construct implements IRestApi {
+export class HttpOpenApi extends Resource implements IRestApi {
   restApiId: string
 
   restApiName: string
@@ -52,18 +49,6 @@ export class HttpOpenApi extends Construct implements IRestApi {
   }
 
   stack: Stack
-
-  get env(): ResourceEnvironment {
-    return {
-      account: this.stack.account,
-      region: this.stack.region
-    }
-  }
-
-  applyRemovalPolicy(policy: RemovalPolicy): void {
-    this.cfnApi.applyRemovalPolicy(policy)
-    this.apiStage.applyRemovalPolicy(policy)
-  }
 
   /**
    *  Api Resource being created based on openAPI definition
@@ -108,7 +93,9 @@ export class HttpOpenApi extends Construct implements IRestApi {
     this.restApiName = this.cfnApi.ref
     this.restApiRootResourceId = `${this.restApiId}-root`
     this.root = new RootResource(this, this.restApiRootResourceId)
-    this.deploymentStage = new Stage(this, '$default', { deployment: new Deployment(this, '$default', { api: this }) })
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const api = this
+    this.deploymentStage = new Stage(this, '$default', { deployment: new Deployment(this, '$default', { api }) })
 
     this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
       apiId: this.cfnApi.ref,
