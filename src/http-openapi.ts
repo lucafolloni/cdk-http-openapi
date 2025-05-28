@@ -93,9 +93,7 @@ export class HttpOpenApi extends Resource implements IRestApi {
     this.restApiName = this.cfnApi.ref
     this.restApiRootResourceId = `${this.restApiId}-root`
     this.root = new RootResource(this, this.restApiRootResourceId)
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    const api = this
-    this.deploymentStage = new Stage(this, '$default', { deployment: new Deployment(this, 'deployment', { api }) })
+    this.deploymentStage = new Stage(this, '$default', { deployment: new Deployment(this, 'deployment', { api: this }) })
 
     this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
       apiId: this.cfnApi.ref,
@@ -243,11 +241,10 @@ export class HttpOpenApi extends Resource implements IRestApi {
   private buildMethodMappings(spec: any) {
     const methods = {} as Record<string, MethodMapping>
 
-    Object.keys(spec.paths).forEach((pathKey) => {
-      const pathObj = spec.paths[pathKey]
+    Object.entries(spec.paths).forEach(([path, pathObj]: [string, any]) => {
       Object.keys(pathObj).forEach((method) => {
-        methods[pathObj[method].operationId] = {
-          path: pathKey,
+        methods[pathObj[method]['x-amazon-apigateway-integration'].uri] = {
+          path,
           method
         }
       })
