@@ -106,19 +106,17 @@ export class HttpOpenApi extends Resource implements IRestApi {
       if (!method) {
         throw new Error(`There is no path in the Open API Spec matching ${integration.operationId}`)
       } else {
-        const funcName = `${props.functionNamePrefix}-${integration.operationId}`
+        const functionName = `${props.functionNamePrefix}-${integration.operationId}`
         // TODO: Think about using NodeJS Lambdas
-        const func = new lambda.Function(this, funcName, {
-          functionName: funcName,
-          runtime: integration.runtime,
+        const func = new lambda.Function(this, functionName, {
+          ...integration,
+          functionName,
           code: lambda.AssetCode.fromAsset(
             integration.sourcePath
           ),
-          handler: integration.handler,
           logRetention: integration.logRetention ?? 90,
           timeout: integration.timeout ?? Duration.seconds(3),
-          memorySize: integration.memorySize ?? 128,
-          environment: integration.environment
+          memorySize: integration.memorySize ?? 128
         })
 
         this.functions[integration.operationId] = func

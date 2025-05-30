@@ -1,5 +1,5 @@
 import { aws_apigatewayv2 as apigwv2, Duration } from 'aws-cdk-lib'
-import { Runtime } from 'aws-cdk-lib/aws-lambda'
+import { ILayerVersion, Runtime } from 'aws-cdk-lib/aws-lambda'
 
 export interface HttpApiProps {
   /**
@@ -68,6 +68,7 @@ export interface HttpApiIntegrationProps {
   readonly logRetention?: number
   readonly timeout?: Duration
   readonly memorySize?: number
+  readonly layers?: ILayerVersion[]
   readonly environment?: Record<string, string>
 }
 
