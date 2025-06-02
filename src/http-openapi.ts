@@ -53,19 +53,19 @@ export class HttpOpenApi extends Construct {
 
     this.methodMappings = this.buildMethodMappings(spec)
 
-    this.cfnApi = new CfnApi(this, `${props.functionNamePrefix}`, {
+    this.cfnApi = new CfnApi(this, `${props.functionNamePrefix}-api`, {
       corsConfiguration: props.corsConfig,
       body: props.openApiSpec
     })
 
-    this.apiStage = new CfnStage(this, 'DefaultStage', {
+    this.apiStage = new CfnStage(this, `${props.functionNamePrefix}-stage`, {
       apiId: this.cfnApi.attrApiId,
       stageName: '$default',
       autoDeploy: true
     })
 
     if (props.acls) {
-      this.association = new CfnWebACLAssociation(this, `${this.cfnApi.attrApiId}-waf-association`, {
+      this.association = new CfnWebACLAssociation(this, `${props.functionNamePrefix}-waf-association`, {
         resourceArn: `arn:${stack.partition}:execute-api:${stack.region}:${stack.account}:${this.cfnApi.attrApiId}/*/*/*`,
         webAclArn: props.acls.attrArn
       })
