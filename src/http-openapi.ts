@@ -9,8 +9,8 @@ import {
 import { Construct } from 'constructs'
 import * as YAML from 'yaml'
 
-import { CorsOptions, Integration, IntegrationType, IResource, IRestApi, MethodOptions, ResourceBase } from 'aws-cdk-lib/aws-apigateway'
-import { CfnApi, CfnIntegration, CfnRoute, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2'
+import { CorsOptions, Integration, IResource, IRestApi, MethodOptions, ResourceBase } from 'aws-cdk-lib/aws-apigateway'
+import { CfnApi, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2'
 import { CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2'
 import { HttpApiProps, MethodMapping } from './types'
 
@@ -106,17 +106,6 @@ export class HttpOpenApi extends Construct {
           payloadFormatVersion: '2.0'
         }
       }
-
-      Object.entries(this.methodMappings).map(([k, v]) => new CfnRoute(this, `route-${k}`, {
-        apiId: this.cfnApi.attrApiId,
-        routeKey: `${v.method.toUpperCase()} ${v.path}`,
-        target: new CfnIntegration(this, `${k}-integration`, {
-          apiId: this.cfnApi.attrApiId,
-          integrationType: IntegrationType.AWS_PROXY,
-          integrationMethod: v.method.toUpperCase(),
-          integrationUri: `arn:${stack.partition}:apigateway:${stack.region}:lambda:path/2015-03-31/functions/${this.functions[k].functionArn}/invocations`
-        }).ref
-      }))
     })
 
     // First loop with authorizers to add their configurations to the spec
