@@ -93,16 +93,19 @@ export class HttpOpenApi extends Construct {
 
         this.functions[integration.operationId] = func
 
-        this.routes.push(new CfnRoute(this, `route-${method.path.replace(/\//g, '-')}-${method.method}`, {
+        const intgr = new CfnIntegration(this, `integration-${method.path.replace(/\//g, '-')}-${method.method}`, {
+          apiId: this.cfnApi.attrApiId,
+          integrationType: IntegrationType.AWS_PROXY,
+          payloadFormatVersion: PayloadFormatVersion.VERSION_2_0.version,
+          integrationUri: `arn:${stack.partition}:apigateway:${stack.region}:lambda:path/2015-03-31/functions/${func.functionArn}/invocations`
+        })
+
+        const route = new CfnRoute(this, `route-${method.path.replace(/\//g, '-')}-${method.method}`, {
           apiId: this.cfnApi.attrApiId,
           routeKey: `${method.method.toUpperCase()} ${method.path}`,
-          target: new CfnIntegration(this, `integration-${method.path.replace(/\//g, '-')}-${method.method}`, {
-            apiId: this.cfnApi.attrApiId,
-            integrationType: IntegrationType.AWS_PROXY,
-            payloadFormatVersion: PayloadFormatVersion.VERSION_2_0.version,
-            integrationUri: `arn:${stack.partition}:apigateway:${stack.region}:lambda:path/2015-03-31/functions/${func.functionArn}/invocations`
-          }).ref
-        }))
+          target: `integrations/${intgr.attrIntegrationId}`
+        })
+        this.routes.push(route)
 
         if (props.customAuthorizerLambdaArn) {
           spec.paths[method.path][method.method].security = [
