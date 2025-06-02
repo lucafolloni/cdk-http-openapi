@@ -10,7 +10,7 @@ import { Construct } from 'constructs'
 import * as YAML from 'yaml'
 
 import { CorsOptions, Integration, IntegrationType, IResource, IRestApi, MethodOptions, ResourceBase } from 'aws-cdk-lib/aws-apigateway'
-import { CfnApi, CfnIntegration, CfnRoute, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2'
+import { CfnApi, CfnIntegration, CfnRoute, CfnStage, PayloadFormatVersion } from 'aws-cdk-lib/aws-apigatewayv2'
 import { CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2'
 import { HttpApiProps, MethodMapping } from './types'
 
@@ -99,6 +99,7 @@ export class HttpOpenApi extends Construct {
           target: new CfnIntegration(this, `integration-${method.path.replace(/\//g, '-')}-${method.method}`, {
             apiId: this.cfnApi.attrApiId,
             integrationType: IntegrationType.AWS_PROXY,
+            payloadFormatVersion: PayloadFormatVersion.VERSION_2_0.version,
             integrationUri: `arn:${stack.partition}:apigateway:${stack.region}:lambda:path/2015-03-31/functions/${func.functionArn}/invocations`
           }).ref
         }))
