@@ -3,53 +3,20 @@ import * as fs from 'fs'
 import { DomainName } from '@aws-cdk/aws-apigatewayv2-alpha'
 import {
   aws_certificatemanager as acm,
-  aws_apigatewayv2 as apigwv2, ArnFormat, Duration,
-  aws_lambda as lambda, Resource, aws_route53 as route53,
-  Stack,
-  Token,
-  ValidationError
+  aws_apigatewayv2 as apigwv2, Duration, aws_lambda as lambda, aws_route53 as route53,
+  Stack
 } from 'aws-cdk-lib'
 import { Construct } from 'constructs'
 import * as YAML from 'yaml'
 
-import { CorsOptions, Deployment, Integration, IResource, IRestApi, MethodOptions, ResourceBase, Stage } from 'aws-cdk-lib/aws-apigateway'
-import { CorsConfigAllOrigins } from './cors'
+import { CorsOptions, Integration, IResource, IRestApi, MethodOptions, ResourceBase } from 'aws-cdk-lib/aws-apigateway'
+import { CfnApi, CfnStage } from 'aws-cdk-lib/aws-apigatewayv2'
+import { CfnWebACLAssociation } from 'aws-cdk-lib/aws-wafv2'
 import { HttpApiProps, MethodMapping } from './types'
 
 const AUTHORIZER_KEY = 'custom_authorizer'
 
-export class HttpOpenApi extends Resource implements IRestApi {
-  restApiId: string
-
-  restApiName: string
-
-  restApiRootResourceId: string
-
-  latestDeployment?: Deployment | undefined
-
-  deploymentStage: Stage
-
-  root: IResource
-
-  arnForExecuteApi(method: string = '*', path: string = '/*', stage: string = '*'): string {
-    if (!Token.isUnresolved(path) && !path.startsWith('/')) {
-      throw new ValidationError(`"path" must begin with a "/": '${path}'`, this)
-    }
-
-    if (method.toUpperCase() === 'ANY') {
-      method = '*'
-    }
-
-    return Stack.of(this).formatArn({
-      service: 'execute-api',
-      resource: this.restApiId,
-      arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
-      resourceName: `${stage}/${method}${path}`
-    })
-  }
-
-  stack: Stack
-
+export class HttpOpenApi extends Construct {
   /**
    *  Api Resource being created based on openAPI definition
    */
@@ -72,6 +39,8 @@ export class HttpOpenApi extends Resource implements IRestApi {
    */
   public readonly methodMappings: Record<string, MethodMapping>
 
+  public readonly association?: CfnWebACLAssociation
+
   constructor(scope: Construct, id: string, props: HttpApiProps) {
     super(scope, id)
 
@@ -80,26 +49,27 @@ export class HttpOpenApi extends Resource implements IRestApi {
 
     const file = fs.readFileSync(props.openApiSpec, 'utf8')
     const spec = YAML.parse(file)
-    this.stack = Stack.of(this)
+    const stack = Stack.of(this)
 
     this.methodMappings = this.buildMethodMappings(spec)
 
-    this.cfnApi = new apigwv2.CfnApi(this, `${props.functionNamePrefix}`, {
-      body: spec,
-      tags: undefined
+    this.cfnApi = new CfnApi(this, `${props.functionNamePrefix}`, {
+      corsConfiguration: props.corsConfig,
+      body: props.openApiSpec
     })
 
-    this.restApiId = this.cfnApi.ref
-    this.restApiName = this.cfnApi.ref
-    this.restApiRootResourceId = `${this.restApiId}-root`
-    this.root = new RootResource(this, this.restApiRootResourceId)
-    this.deploymentStage = new Stage(this, '$default', { deployment: this.latestDeployment ?? new Deployment(this, 'Deployment', { api: this }) })
-
-    this.apiStage = new apigwv2.CfnStage(this, 'DefaultStage', {
-      apiId: this.cfnApi.ref,
+    this.apiStage = new CfnStage(this, 'DefaultStage', {
+      apiId: this.cfnApi.attrApiId,
       stageName: '$default',
       autoDeploy: true
     })
+
+    if (props.acls) {
+      this.association = new CfnWebACLAssociation(this, `${this.cfnApi.attrApiId}-waf-association`, {
+        resourceArn: `arn:${stack.partition}:execute-api:${stack.region}:${stack.account}:${this.cfnApi.attrApiId}/*/*/*`,
+        webAclArn: props.acls.attrArn
+      })
+    }
 
     props.integrations.forEach((integration) => {
       const method = this.methodMappings[integration.operationId]
@@ -107,7 +77,6 @@ export class HttpOpenApi extends Resource implements IRestApi {
         throw new Error(`There is no path in the Open API Spec matching ${integration.operationId}`)
       } else {
         const functionName = `${props.functionNamePrefix}-${integration.operationId}`
-        // TODO: Think about using NodeJS Lambdas
         const func = new lambda.Function(this, functionName, {
           ...integration,
           functionName,
@@ -145,15 +114,7 @@ export class HttpOpenApi extends Resource implements IRestApi {
       spec.components.securitySchemes = {}
       // https://docs.aws.amazon.com/apigateway/latest/developerguide/api-gateway-swagger-extensions-authorizer.html
       spec.components.securitySchemes[AUTHORIZER_KEY] =
-        this.toAuthorizerSpec(props.customAuthorizerLambdaArn, this.stack.region)
-    }
-
-    // add passed or default cors
-    if (props.corsConfig) {
-      spec['x-amazon-apigateway-cors'] = props.corsConfig
-    } else if (props.corsAllowAllOrigins) {
-      // Allow all origins
-      spec['x-amazon-apigateway-cors'] = CorsConfigAllOrigins
+        this.toAuthorizerSpec(props.customAuthorizerLambdaArn, stack.region)
     }
 
     // Second loop with Authorizers, in order to add InvokeFunction permission
@@ -163,7 +124,7 @@ export class HttpOpenApi extends Resource implements IRestApi {
         action: 'lambda:InvokeFunction',
         principal: 'apigateway.amazonaws.com',
         functionName: props.customAuthorizerLambdaArn,
-        sourceArn: `arn:aws:execute-api:${this.stack.region}:${this.stack.account}:${this.cfnApi.ref}/*/*/*`
+        sourceArn: `arn:${stack.partition}:execute-api:${stack.region}:${stack.account}:${this.cfnApi.attrApiId}/*/*/*`
       })
       this.permissions[AUTHORIZER_KEY] = permission
     }
@@ -174,7 +135,7 @@ export class HttpOpenApi extends Resource implements IRestApi {
         action: 'lambda:InvokeFunction',
         principal: 'apigateway.amazonaws.com',
         functionName: func.functionName,
-        sourceArn: `arn:${this.stack.partition}:execute-api:${this.stack.region}:${this.stack.account}:${this.cfnApi.ref}/*/*`
+        sourceArn: `arn:${stack.partition}:execute-api:${stack.region}:${stack.account}:${this.cfnApi.attrApiId}/*/*`
       })
       this.permissions[funcKey] = permission
     })
@@ -217,13 +178,13 @@ export class HttpOpenApi extends Resource implements IRestApi {
     const aaaaRecord = new route53.AaaaRecord(this, 'CustomDomainAAAARecord', routeConfig)
 
     const apiMapping = new apigwv2.CfnApiMapping(this, 'CustomDomainApiMapping', {
-      apiId: this.cfnApi.ref,
+      apiId: this.cfnApi.attrApiId,
       domainName: customDomainName,
       stage: this.apiStage.stageName
     })
 
-    apiMapping.addDependsOn(this.cfnApi)
-    apiMapping.addDependsOn(this.apiStage)
+    apiMapping.node.addDependency(this.cfnApi)
+    apiMapping.node.addDependency(this.apiStage)
     apiMapping.node.addDependency(domainName)
     apiMapping.node.addDependency(aRecord)
     apiMapping.node.addDependency(aaaaRecord)

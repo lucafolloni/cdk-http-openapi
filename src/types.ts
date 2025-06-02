@@ -1,5 +1,7 @@
-import { aws_apigatewayv2 as apigwv2, Duration } from 'aws-cdk-lib'
+import { Duration } from 'aws-cdk-lib'
+import { CfnApi } from 'aws-cdk-lib/aws-apigatewayv2'
 import { ILayerVersion, Runtime } from 'aws-cdk-lib/aws-lambda'
+import { CfnWebACL } from 'aws-cdk-lib/aws-wafv2'
 
 export interface HttpApiProps {
   /**
@@ -52,12 +54,9 @@ export interface HttpApiProps {
    *  }
    * ]
    */
-  readonly corsConfig?: apigwv2.CfnApi.CorsProperty
+  readonly corsConfig?: CfnApi.CorsProperty
 
-  /**
-   * set to true to enable cors for all origins
-   */
-  readonly corsAllowAllOrigins?: boolean
+  readonly acls?: CfnWebACL
 }
 
 export interface HttpApiIntegrationProps {
