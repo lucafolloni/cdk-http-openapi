@@ -69,7 +69,7 @@ export class HttpOpenApi extends Construct {
 
     if (props.acls) {
       this.association = new CfnWebACLAssociation(this, `${props.functionNamePrefix}-waf-association`, {
-        resourceArn: `arn:${stack.partition}:execute-api:${stack.region}:${stack.account}:${this.cfnApi.attrApiId}/*/*/*`,
+        resourceArn: `arn:${stack.partition}:execute-api:${stack.region}:${stack.account}:${this.cfnApi.attrApiId}`,
         webAclArn: props.acls.attrArn
       })
     }
