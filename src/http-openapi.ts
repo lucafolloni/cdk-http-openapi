@@ -54,7 +54,8 @@ export class HttpOpenApi extends Construct {
     this.methodMappings = this.buildMethodMappings(spec)
 
     this.cfnApi = new CfnApi(this, `${props.functionNamePrefix}-api`, {
-      corsConfiguration: props.corsConfig
+      corsConfiguration: props.corsConfig,
+      protocolType: 'HTTP'
     })
 
     this.apiStage = new CfnStage(this, `${props.functionNamePrefix}-stage`, {
